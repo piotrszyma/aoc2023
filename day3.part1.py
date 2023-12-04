@@ -51,7 +51,7 @@ def main():
 
             left_shift = 0
 
-            for left_shift, char in enumerate(line):
+            for left_shift, char in enumerate(line + "."): # Add extra '.' so line never ends with number.
                 if char.isdigit():
                     if current_num == "":  # Start of a number.
                         current_num = char
@@ -78,18 +78,6 @@ def main():
                         )
 
                         symbol_pos_to_symbol_value[symbol_pos] = char
-
-            if current_num != "": # Clear number (if set).
-                assert current_num_start
-                engine_nums.append(
-                    EngineNumber(
-                        start=current_num_start,
-                        end=Point(left_shift, top_shift),
-                        value=int(current_num),
-                    )
-                )
-                current_num = ""
-                current_num_start = None
 
         part_numbers: list[EngineNumber] = []
         for engine_num in engine_nums:
