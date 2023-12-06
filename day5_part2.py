@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import pathlib
 from typing import Iterable, NamedTuple, TypeVar
 
+
 def is_empty(range: range) -> bool:
     return len(range) == 0
 
@@ -32,29 +33,6 @@ def difference(r1: range, r2: range) -> list[range]:
     # r2 cuts r1 into two
     if r1.start < r2.start and r1.stop > r2.stop:
         return [range(r1.start, r2.start), range(r2.stop, r1.stop)]
-
-
-    # # -- r1 --
-    # #          - r2 -
-    # if r1.stop <= r2.start:
-    #     return [r1]
-
-    # #    -- r1 --
-    # #          - r2 -
-    # if r1.start <= r2.start and r1.stop > r2.start and r1.stop < r2.stop:
-    #     return [range(r1.start, r2.start)]
-
-    # #         -- r1 --
-    # #          - r2 -
-    # #           -- r1 --
-    # #          - r2 -
-    # if r1.start > r2.start and r2.stop > r1.start and r1.stop > r2.stop:
-    #     return [range(r2.stop + 1, r1.stop)]
-
-    # #                   -- r1 --
-    # #          - r2 -
-    # if r1.start >= r2.stop:
-    #     return [r1]
 
     raise RuntimeError(f"Unexpected ranges {r1=}, {r2=} for difference")
 
@@ -100,7 +78,9 @@ class ItemMapping:
 
         other_ranges = difference(r, common_range)
 
-        common_range_shifted = range(common_range.start + self.shift, common_range.stop + self.shift)
+        common_range_shifted = range(
+            common_range.start + self.shift, common_range.stop + self.shift
+        )
         return (common_range_shifted, other_ranges)
 
 
@@ -118,14 +98,9 @@ def apply(value: int, mappings: list[ItemMapping]) -> int:
 
 
 def apply_range(r: range, mappings: list[ItemMapping]) -> list[range]:
-    # seeds: 79 14 55 13
-    # seed-to-soil map:
-    # 50 98 2
-    # 52 50 48
     for mapping in mappings:
         applied_ranges, other_ranges = mapping.apply_range(r)
         if applied_ranges is not None:
-            # assert len(other_ranges) == 0
             return [applied_ranges, *other_ranges]
 
     return [r]
@@ -196,16 +171,6 @@ def main():
 
     lowest_location = min(r.start for r in values)
     print(lowest_location)
-
-import traceback
-
-def assert_equal(left: T, right: T):
-    if left != right:
-        try:
-            raise ValueError(f"left is not right = {(left, right)}")
-        except ValueError as error:
-            traceback.print_stack()
-            print(error)
 
 
 if __name__ == "__main__":
