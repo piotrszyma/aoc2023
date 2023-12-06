@@ -4,34 +4,59 @@ from dataclasses import dataclass
 import pathlib
 from typing import Iterable, NamedTuple, TypeVar
 
+def is_empty(range: range) -> bool:
+    return len(range) == 0
+
 
 def difference(r1: range, r2: range) -> list[range]:
-    # -- r1 --
-    #          - r2 -
-    if r1.stop <= r2.start:
+    # nothing in common from left
+    if r2.stop <= r1.start:
         return [r1]
 
-    #    -- r1 --
-    #          - r2 -
-    if r1.start < r2.start and r1.stop > r2.start and r1.stop < r2.stop:
+    # nothing in common from right
+    if r2.start >= r1.stop:
+        return [r1]
+
+    # left overlap (not fully)
+    if r2.start <= r1.start and r2.stop < r1.stop:
+        return [range(r2.stop, r1.stop)]
+
+    # right overlap (not fully)
+    if r1.start < r2.start and r2.stop >= r1.stop:
         return [range(r1.start, r2.start)]
 
-    #         -- r1 --
-    #          - r2 -
+    # r1 is smaller or at most equal r2
+    if r1.start >= r2.start and r1.stop <= r2.stop:
+        return []
+
+    # r2 cuts r1 into two
     if r1.start < r2.start and r1.stop > r2.stop:
         return [range(r1.start, r2.start), range(r2.stop, r1.stop)]
 
-    #           -- r1 --
-    #          - r2 -
-    if r1.start > r2.start and r2.stop > r1.start and r1.stop > r2.stop:
-        return [range(r2.stop + 1, r1.stop)]
 
-    #                   -- r1 --
-    #          - r2 -
-    if r1.start >= r2.stop:
-        return [r1]
+    # # -- r1 --
+    # #          - r2 -
+    # if r1.stop <= r2.start:
+    #     return [r1]
 
-    raise RuntimeError(f"Unexpected ranges {r1=}, {r2=}")
+    # #    -- r1 --
+    # #          - r2 -
+    # if r1.start <= r2.start and r1.stop > r2.start and r1.stop < r2.stop:
+    #     return [range(r1.start, r2.start)]
+
+    # #         -- r1 --
+    # #          - r2 -
+    # #           -- r1 --
+    # #          - r2 -
+    # if r1.start > r2.start and r2.stop > r1.start and r1.stop > r2.stop:
+    #     return [range(r2.stop + 1, r1.stop)]
+
+    # #                   -- r1 --
+    # #          - r2 -
+    # if r1.start >= r2.stop:
+    #     return [r1]
+
+    raise RuntimeError(f"Unexpected ranges {r1=}, {r2=} for difference")
 
 
 def intersection(r1: range, r2: range) -> range:
@@ -69,7 +94,14 @@ class ItemMapping:
 
     def apply_range(self, r: range) -> tuple[range | None, list[range]]:
         """Returns pair - applied chunk (or None if nothing) and not applied list."""
-        raise NotImplementedError
+        common_range = intersection(r, self.range_)
+        if is_empty(common_range):
+            return (None, [r])
+
+        other_ranges = difference(r, common_range)
+
+        common_range_shifted = range(common_range.start + self.shift, common_range.stop + self.shift)
+        return (common_range_shifted, other_ranges)
 
 
 class ItemKey(NamedTuple):
@@ -86,8 +118,17 @@ def apply(value: int, mappings: list[ItemMapping]) -> int:
 
 
 def apply_range(r: range, mappings: list[ItemMapping]) -> list[range]:
-    # TODO(pszyma): create apply that maps ranges.
-    ...
+    # seeds: 79 14 55 13
+    # seed-to-soil map:
+    # 50 98 2
+    # 52 50 48
+    for mapping in mappings:
+        applied_ranges, other_ranges = mapping.apply_range(r)
+        if applied_ranges is not None:
+            # assert len(other_ranges) == 0
+            return [applied_ranges, *other_ranges]
+
+    return [r]
 
 
 T = TypeVar("T")
@@ -101,6 +142,9 @@ def pairs(iterable: Iterable[T]) -> Iterable[tuple[T, T]]:
             pair = []
 
         pair.append(item)
+
+    if len(pair) == 2:
+        yield (pair[0], pair[1])
 
 
 def main():
@@ -165,51 +209,4 @@ def assert_equal(left: T, right: T):
 
 
 if __name__ == "__main__":
-    # Tests.
-    mapping1 = ItemMapping(dest_start=50, source_start=98, size=2)
-    assert list(mapping1.range_) == [98, 99]
-
-    mapping2 = ItemMapping(dest_start=52, source_start=50, size=48)
-    assert mapping2.apply(79) == 81
-
-    # right intersect
-    assert intersection(range(0, 5), range(1, 6)) == range(1, 5)
-    # all intersect
-    assert intersection(range(0, 5), range(1, 4)) == range(1, 4)
-    # left intersect
-    assert intersection(range(-5, 6), range(0, 5)) == range(0, 5)
-    # no intersect
-    assert intersection(range(0, 5), range(6, 10)) == range(0, 0)
-    # -- r1 --
-    #          - r2 -
-
-
-    # assert_equal(
-    #     difference(range(0, 10), range(10, 15)), [range(0, 10)]
-    # )
-
-    #    -- r1 --
-    #          - r2 -
-
-    assert_equal(
-        difference(range(0, 10), range(5, 15)), [range(0, 5)]
-    )
-
-    #         -- r1 --
-    #          - r2 -
-
-    assert_equal(
-        difference(range(0, 10), range(1, 5)), [range(0, 1), range(5, 10)]
-    )
-
-    #           -- r1 --
-    #          - r2 -
-
-    assert_equal(
-        difference(range(5, 10), range(0, 5)), [range(5, 10)]
-    )
-
-    #                   -- r1 --
-    #          - r2 -
-
-    # main()
+    main()
