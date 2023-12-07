@@ -11,10 +11,10 @@ import pathlib
 # 251721105 is too high
 # 250665248 is okay
 
-_JACK_SYMBOL = "J"
+_JOKER_SYMBOL = "J"
 
 _LETTER_TO_VALUE = {
-    _JACK_SYMBOL: 0,
+    _JOKER_SYMBOL: 0,
     "T": 10,
     "Q": 12,
     "K": 13,
@@ -22,8 +22,8 @@ _LETTER_TO_VALUE = {
 }
 
 
-def is_jack(card: "Card") -> bool:
-    return card.symbol == _JACK_SYMBOL
+def is_joker(card: "Card") -> bool:
+    return card.symbol == _JOKER_SYMBOL
 
 
 class HandType(enum.IntEnum):
@@ -75,11 +75,11 @@ class Hand:
         return Hand(cards=cards, bid=bid)
 
     def _cards_for_hand_type(self) -> tuple[Card, ...]:
-        card_for_jack = self._most_common_card()
-        if card_for_jack is None:
+        card_for_jocker = self._most_common_card()
+        if card_for_jocker is None:
             return self.cards
 
-        return tuple((card_for_jack if is_jack(c) else c) for c in self.cards)
+        return tuple((card_for_jocker if is_joker(c) else c) for c in self.cards)
 
     @functools.lru_cache
     def hand_type(self) -> HandType:
@@ -110,14 +110,14 @@ class Hand:
             return HandType.ALL_DISTINCT
 
     def _most_common_card(self) -> Card | None:
-        card_no_jack = tuple(c for c in self.cards if not is_jack(c))
-        if len(card_no_jack) == 0:
+        card_no_jocker = tuple(c for c in self.cards if not is_joker(c))
+        if len(card_no_jocker) == 0:
             return None
 
-        counter = collections.Counter(c for c in self.cards if not is_jack(c))
+        counter = collections.Counter(card_no_jocker)
         [(most_common_card, _)] = counter.most_common(1)
 
-        assert not is_jack(most_common_card)
+        assert not is_joker(most_common_card)
 
         return most_common_card
 

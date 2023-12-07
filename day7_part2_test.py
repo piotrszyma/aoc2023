@@ -1,21 +1,21 @@
 from day7_part2 import Card, Hand, HandType
 
 
-def test_five_of_kind_with_jack():
+def test_five_of_kind_with_joker():
     h1 = Hand.from_symbols("JJJ22")
     h2 = Hand.from_symbols("TTTKK")
 
     assert h1 > h2
 
 
-def test_four_of_kind_with_jack():
+def test_four_of_kind_with_joker():
     h1 = Hand.from_symbols("JJJ2A")
     h2 = Hand.from_symbols("TTTKK")
 
     assert h1 > h2
 
 
-def test_three_of_kind_with_jack():
+def test_three_of_kind_with_joker():
     h1 = Hand.from_symbols("JJ22A")
     h2 = Hand.from_symbols("TTJKK")
 
@@ -42,7 +42,7 @@ def test_hand_type2():
     assert Hand.from_symbols("QQQKA").hand_type() == HandType.THREE_OF_KIND
 
 
-def test_jack():
+def test_joker():
     assert (
         Hand.from_symbols("QQQJA").hand_type() == Hand.from_symbols("QQQJB").hand_type()
     )
