@@ -9,6 +9,7 @@ import pathlib
 # 252082465 is too high
 # 251759939 is too high
 # 251721105 is too high
+# 250665248 is okay
 
 _JACK_SYMBOL = "J"
 
@@ -64,21 +65,25 @@ class Hand:
     cards: tuple[Card, ...]
     bid: int
 
+    def __hash__(self):
+        return hash((self.cards, self.bid))
+
     @staticmethod
     def from_symbols(symbols: str, bid: int = 0) -> "Hand":
         assert len(symbols) == 5
         cards = tuple(Card.from_symbol(s) for s in symbols)
         return Hand(cards=cards, bid=bid)
 
-    def cards_for_hand_type(self) -> tuple[Card, ...]:
-        card_for_jack = self.most_common_card()
+    def _cards_for_hand_type(self) -> tuple[Card, ...]:
+        card_for_jack = self._most_common_card()
         if card_for_jack is None:
             return self.cards
 
         return tuple((card_for_jack if is_jack(c) else c) for c in self.cards)
 
+    @functools.lru_cache
     def hand_type(self) -> HandType:
-        cards_for_hand_type = self.cards_for_hand_type()
+        cards_for_hand_type = self._cards_for_hand_type()
 
         distinct_cards = set(cards_for_hand_type)
         most_common_count = max(collections.Counter(cards_for_hand_type).values())
@@ -89,6 +94,9 @@ class Hand:
         # AAAAB
         elif len(distinct_cards) == 2 and most_common_count == 4:
             return HandType.FOUR_OF_KIND
+        # AAABC
+        elif len(distinct_cards) == 3 and most_common_count == 3:
+            return HandType.THREE_OF_KIND
         # AAABB
         elif len(distinct_cards) == 2 and most_common_count == 3:
             return HandType.HOUSE
@@ -101,7 +109,7 @@ class Hand:
         else:
             return HandType.ALL_DISTINCT
 
-    def most_common_card(self) -> Card | None:
+    def _most_common_card(self) -> Card | None:
         card_no_jack = tuple(c for c in self.cards if not is_jack(c))
         if len(card_no_jack) == 0:
             return None

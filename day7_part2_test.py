@@ -38,16 +38,28 @@ def test_hand_type():
     assert Hand.from_symbols("KTJJT").hand_type() == HandType.FOUR_OF_KIND
     assert Hand.from_symbols("QQQJA").hand_type() == HandType.FOUR_OF_KIND
 
+def test_hand_type2():
+    assert Hand.from_symbols("QQQKA").hand_type() == HandType.THREE_OF_KIND
+
+
+def test_jack():
+    assert (
+        Hand.from_symbols("QQQJA").hand_type() == Hand.from_symbols("QQQJB").hand_type()
+    )
+
 
 def test_hand_type_weaker():
     assert Hand.from_symbols("JKKK2") < Hand.from_symbols("QJJQ2")
     assert Hand.from_symbols("JJJJK") < Hand.from_symbols("JJKJJ")
 
+
 def test_equal():
-    assert Card.from_symbol('J') == Card.from_symbol('J')
+    assert Card.from_symbol("J") == Card.from_symbol("J")
+
 
 def test_small_than():
-    assert Card.from_symbol('2') < Card.from_symbol('3')
+    assert Card.from_symbol("2") < Card.from_symbol("3")
+
 
 def test_bigger_than():
-    assert Card.from_symbol('3') > Card.from_symbol('2')
+    assert Card.from_symbol("3") > Card.from_symbol("2")
