@@ -1,4 +1,4 @@
-from day7_part2 import Hand, HandType
+from day7_part2 import Card, Hand, HandType
 
 
 def test_five_of_kind_with_jack():
@@ -42,3 +42,12 @@ def test_hand_type():
 def test_hand_type_weaker():
     assert Hand.from_symbols("JKKK2") < Hand.from_symbols("QJJQ2")
     assert Hand.from_symbols("JJJJK") < Hand.from_symbols("JJKJJ")
+
+def test_equal():
+    assert Card.from_symbol('J') == Card.from_symbol('J')
+
+def test_small_than():
+    assert Card.from_symbol('2') < Card.from_symbol('3')
+
+def test_bigger_than():
+    assert Card.from_symbol('3') > Card.from_symbol('2')

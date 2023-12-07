@@ -3,6 +3,7 @@
 import collections
 from dataclasses import dataclass
 import enum
+import functools
 import pathlib
 
 # 252082465 is too high
@@ -38,7 +39,7 @@ class HandType(enum.IntEnum):
 class Card:
     symbol: str
 
-    @property
+    @functools.cached_property
     def value(self) -> int:
         if self.symbol.isdigit():
             return int(self.symbol)
@@ -49,12 +50,7 @@ class Card:
 
     @staticmethod
     def from_symbol(s: str) -> "Card":
-        if s.isdigit():
-            return Card(symbol=s)
-        else:
-            value = _LETTER_TO_VALUE.get(s)
-            assert value is not None
-            return Card(symbol=s)
+        return Card(symbol=s)
 
     def __hash__(self) -> int:
         return hash(self.symbol)
@@ -68,6 +64,12 @@ class Hand:
     cards: tuple[Card, ...]
     bid: int
 
+    @staticmethod
+    def from_symbols(symbols: str, bid: int = 0) -> "Hand":
+        assert len(symbols) == 5
+        cards = tuple(Card.from_symbol(s) for s in symbols)
+        return Hand(cards=cards, bid=bid)
+
     def cards_for_hand_type(self) -> tuple[Card, ...]:
         card_for_jack = self.most_common_card()
         if card_for_jack is None:
@@ -76,13 +78,13 @@ class Hand:
         return tuple((card_for_jack if is_jack(c) else c) for c in self.cards)
 
     def hand_type(self) -> HandType:
-        distinct_cards = set(self.cards_for_hand_type())
-        most_common_count = max(
-            collections.Counter(self.cards_for_hand_type()).values()
-        )
+        cards_for_hand_type = self.cards_for_hand_type()
+
+        distinct_cards = set(cards_for_hand_type)
+        most_common_count = max(collections.Counter(cards_for_hand_type).values())
 
         # AAAAA
-        if len(distinct_cards) == 1:
+        if len(distinct_cards) == 1 and most_common_count == 5:
             return HandType.FIVE_OF_KIND
         # AAAAB
         elif len(distinct_cards) == 2 and most_common_count == 4:
@@ -98,12 +100,6 @@ class Hand:
             return HandType.ONE_PAIR
         else:
             return HandType.ALL_DISTINCT
-
-    @staticmethod
-    def from_symbols(symbols: str, bid: int = 0) -> "Hand":
-        assert len(symbols) == 5
-        cards = tuple(Card.from_symbol(s) for s in symbols)
-        return Hand(cards=cards, bid=bid)
 
     def most_common_card(self) -> Card | None:
         card_no_jack = tuple(c for c in self.cards if not is_jack(c))
@@ -130,10 +126,10 @@ class Hand:
 
         # Same hand type.
         for self_card, other_card in zip(self.cards, other.cards):
-            if self_card.value == other_card.value:
+            if self_card == other_card:
                 continue
 
-            return self_card.value < other_card.value
+            return self_card < other_card
 
         raise ValueError(f"unexpected comparison {self=} {other=}")
 
