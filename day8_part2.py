@@ -1,6 +1,7 @@
 # Day 8
 from dataclasses import dataclass
 import enum
+import functools
 import itertools
 import pathlib
 
@@ -19,6 +20,7 @@ class Instruction(enum.StrEnum):
             case _:
                 raise ValueError(f"Unexpected instruction string {v}")
 
+
 @dataclass
 class Node:
     symbol: str
@@ -26,7 +28,7 @@ class Node:
     right: str
 
     @staticmethod
-    def from_string(s: str) -> 'Node':
+    def from_string(s: str) -> "Node":
         """From 'AAA = (BBB, CCC)' string."""
         node_symbol, neighbours_raw = s.split(" = ")
         neighbours_raw = neighbours_raw[1:-1]
@@ -42,10 +44,40 @@ class Node:
             raise ValueError(f"unexpected instruction {instruction}")
 
     def is_start(self) -> bool:
-        return self.symbol[-1] == 'A'
+        return self.symbol[-1] == "A"
 
     def is_end(self) -> bool:
-        return self.symbol[-1] == 'Z'
+        return self.symbol[-1] == "Z"
+
+
+def find_smallest_cycle(
+    start_node: Node,
+    instructions: list[Instruction],
+    node_symbol_to_node: dict[str, Node],
+) -> int:
+    current_node = start_node
+    steps = 0
+
+    for next_move in itertools.cycle(instructions):
+        neighbour_id = current_node.neighbour(next_move)
+        current_node = node_symbol_to_node[neighbour_id]
+        steps += 1
+
+        if current_node.is_end():
+            return steps
+
+    assert False, "Asserts never reached"
+
+
+def greatest_commont_divider(a, b):
+    if a == 0:
+        return b
+
+    return greatest_commont_divider(b % a, a)
+
+
+def least_common_multiple(a, b):
+    return (a / greatest_commont_divider(a, b)) * b
 
 
 def main():
@@ -53,7 +85,7 @@ def main():
 
     instructions_raw, nodes_all_raw = data.split("\n\n")
     instructions = [Instruction.from_string(i) for i in instructions_raw]
-    nodes_raw = nodes_all_raw.split('\n')
+    nodes_raw = nodes_all_raw.split("\n")
 
     node_symbol_to_node: dict[str, Node] = {}
 
@@ -63,32 +95,12 @@ def main():
 
     start_nodes = [n for n in node_symbol_to_node.values() if n.is_start()]
 
-    current_nodes = start_nodes
+    each_start_smallest_cycle = [
+        find_smallest_cycle(n, instructions, node_symbol_to_node) for n in start_nodes
+    ]
 
-    steps = 0
-
-    for next_move in itertools.cycle(instructions):
-        is_end = True
-        next_current_nodes: list[Node] = []
-        for current_node in current_nodes:
-            node = node_symbol_to_node[current_node.symbol]
-            neighbour_id = node.neighbour(next_move)
-
-            next_node = node_symbol_to_node.get(neighbour_id)
-            assert next_node
-
-            next_current_nodes.append(next_node)
-            if is_end and not next_node.is_end():
-                is_end = False
-
-
-        current_nodes = next_current_nodes
-        steps += 1
-
-        if is_end:
-            break
-
-    print(steps)
+    count = functools.reduce(least_common_multiple, each_start_smallest_cycle)
+    print(int(count))
 
 
 if __name__ == "__main__":
