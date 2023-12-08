@@ -9,10 +9,10 @@ def main():
     day: int = args.day
 
     template = f"""# Day {day}
+import pathlib
 
 def main():
-    with open("day{day}_input_test.txt", "r") as f:
-        ...
+    data = pathlib.Path("day{day}_input_test.txt").read_text()
 
 if __name__ == "__main__":
     main()
