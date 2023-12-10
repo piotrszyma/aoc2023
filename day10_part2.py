@@ -17,7 +17,7 @@ _START_SYMBOL_VALUE = "S"
 # S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
 
 
-_MAPPING: dict[str, tuple[str, str, str]] = {
+_X3_PIPE_MAPPING: dict[str, tuple[str, str, str]] = {
     "|": (
         ".X.",
         ".X.",
@@ -96,17 +96,6 @@ Direction = Literal["up", "right", "down", "left"]
 @dataclass
 class Symbol:
     value: str
-
-
-# | is a vertical pipe connecting north and south.
-# - is a horizontal pipe connecting east and west.
-# L is a 90-degree bend connecting north and east.
-# J is a 90-degree bend connecting north and west.
-# 7 is a 90-degree bend connecting south and west.
-# F is a 90-degree bend connecting south and east.
-# . is ground; there is no pipe in this tile.
-# S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
-
 
 @dataclass
 class Pipe:
@@ -216,11 +205,12 @@ def main():
         pipeline.append(next_pipe_to_visit)
         visited_pipes.add(next_pipe_to_visit)
 
-
     # ==== PART 2 ====
 
     pipeline_positions: set[Position] = set(p.position for p in pipeline)
 
+    # Generate pipeline zoomed x3.
+    # X represents pipeline element, '.' represents all other.
     pipeline_x3: list[list[str]] = []
 
     for top_shift, row_raw in enumerate(rows_raw):
@@ -228,15 +218,16 @@ def main():
         for left_shift, symbol in enumerate(row_raw):
             p = Position(left_shift=left_shift, top_shift=top_shift)
             if p not in pipeline_positions:
-                mapped = _MAPPING['.'] # nothing here
+                mapped = _X3_PIPE_MAPPING['.'] # nothing here
             else:
-                mapped = _MAPPING[symbol]
+                mapped = _X3_PIPE_MAPPING[symbol]
 
             for idx in range(3):
                 rows_x3[idx].extend(mapped[idx])
 
         pipeline_x3.extend(rows_x3)
 
+    # Mark all points that are accessible from bounding box as 'A' (accessible).
     to_visit = [Position(0, 0)]
     visited = set[Position]()
 
@@ -252,12 +243,13 @@ def main():
         if val == 'X':
             continue
 
-        pipeline_x3[el.top_shift][el.left_shift] = 'X'
+        pipeline_x3[el.top_shift][el.left_shift] = 'A'
 
         for el in el.all_neighbours():
             to_visit.append(el)
 
     total_3x3_dots = 0
+
     # Window every 3x3.
     for top_shift in range(0, len(pipeline_x3), 3):
         for left_shift in range(0, len(pipeline_x3[0]), 3):
