@@ -1,6 +1,7 @@
 # Day 10
 from dataclasses import dataclass
 import pathlib
+import sys
 from typing import Iterable, Literal
 
 _START_SYMBOL_VALUE = "S"
@@ -18,34 +19,34 @@ _START_SYMBOL_VALUE = "S"
 
 _MAPPING: dict[str, tuple[str, str, str]] = {
     "|": (
-        ".|.",
-        ".|.",
-        ".|.",
+        ".X.",
+        ".X.",
+        ".X.",
     ),
     "-": (
         "...",
-        "---",
+        "XXX",
         "...",
     ),
     "L": (
-        ".|.",
-        ".L-",
+        ".X.",
+        ".XX",
         "...",
     ),
     "J": (
-        ".|.",
-        "-J.",
+        ".X.",
+        "XX.",
         "...",
     ),
     "7": (
         "...",
-        "-7.",
-        ".|.",
+        "XX.",
+        ".X.",
     ),
     "F": (
         "...",
-        ".F-",
-        ".|.",
+        ".XX",
+        ".X.",
     ),
     ".": (
         "...",
@@ -53,9 +54,9 @@ _MAPPING: dict[str, tuple[str, str, str]] = {
         "...",
     ),
     "S": (
-        ".|.",
-        "-S-",
-        ".|.",
+        ".X.",
+        "XXX",
+        ".X.",
     ),
 }
 
@@ -175,33 +176,19 @@ class Pipe:
 
 
 def main():
-    data = pathlib.Path("day10_input_test2.txt").read_text()
+    data = pathlib.Path("day10_input.txt").read_text()
 
     rows_raw = data.split("\n")
-    rows_raw_mapped = []
-    for row in rows_raw:
-        row_mapped = []
-        for c in row:
-            row_mapped.append(_MAPPING[c])
-
-        rows_raw_mapped.append(row_mapped)
-
-    rows_raw_mapped = [_MAPPING[c] for row in rows_raw for c in row]
-
-    rows_raw_mapped = []
-    for row_raw_mapped in rows_raw_mapped:
-        for idx in range(3):
-            rows_raw_mapped.append(''.join(r[idx] for r in row_raw_mapped))
 
     position_to_pipe = dict[Position, Pipe]()
 
     start_pipe: Pipe | None = None
 
-    for top_shift, row_raw in enumerate(rows_raw_mapped):
-        for left_shift, p in enumerate(row_raw):
+    for top_shift, row_raw in enumerate(rows_raw):
+        for left_shift, symbol in enumerate(row_raw):
             position = Position(left_shift=left_shift, top_shift=top_shift)
             pipe = Pipe(
-                symbol=p,
+                symbol=symbol,
                 position=position,
             )
 
@@ -211,7 +198,6 @@ def main():
             position_to_pipe[position] = pipe
 
     assert start_pipe is not None, "start pipe not found"
-
     visited_pipes: set[Pipe] = {start_pipe}
     pipeline: list[Pipe] = [start_pipe]
 
@@ -230,63 +216,62 @@ def main():
         pipeline.append(next_pipe_to_visit)
         visited_pipes.add(next_pipe_to_visit)
 
-    # Find bounding box covering all pipe elements.
-    left_top_min_pos = Position(top_shift=0, left_shift=0)
-    right_bottom_max_pos = Position(
-        top_shift=max(p.position.top_shift for p in visited_pipes),
-        left_shift=max(p.position.left_shift for p in visited_pipes),
-    )
 
-    # Get all positions on bounding box that are not pipeline.
-    positions_to_check: set[Position] = {
-        *[
-            Position(top_shift=0, left_shift=left_shift)
-            for left_shift in range(right_bottom_max_pos.left_shift + 1)
-        ],
-        *[
-            Position(top_shift=right_bottom_max_pos.top_shift, left_shift=left_shift)
-            for left_shift in range(right_bottom_max_pos.left_shift + 1)
-        ],
-        *[
-            Position(top_shift=top_shift, left_shift=0)
-            for top_shift in range(right_bottom_max_pos.top_shift + 1)
-        ],
-        *[
-            Position(top_shift=top_shift, left_shift=right_bottom_max_pos.left_shift)
-            for top_shift in range(right_bottom_max_pos.top_shift + 1)
-        ],
-    }
+    # ==== PART 2 ====
 
-    positions_to_check_list = list(positions_to_check)
-    positions_outside = set[Position]()
+    pipeline_positions: set[Position] = set(p.position for p in pipeline)
 
-    visited_pipe_pos = {p.position for p in visited_pipes}
+    pipeline_x3: list[list[str]] = []
 
-    def is_pipe(pos: Position) -> bool:
-        return pos in visited_pipe_pos
+    for top_shift, row_raw in enumerate(rows_raw):
+        rows_x3 = [[], [], []]
+        for left_shift, symbol in enumerate(row_raw):
+            p = Position(left_shift=left_shift, top_shift=top_shift)
+            if p not in pipeline_positions:
+                mapped = _MAPPING['.'] # nothing here
+            else:
+                mapped = _MAPPING[symbol]
 
-    def is_outside_bounding_box(pos: Position) -> bool:
-        return (
-            pos.left_shift < 0
-            or pos.top_shift < 0
-            or pos.left_shift > right_bottom_max_pos.left_shift
-            or pos.top_shift > right_bottom_max_pos.top_shift
-        )
+            for idx in range(3):
+                rows_x3[idx].extend(mapped[idx])
 
-    while positions_to_check_list:
-        position = positions_to_check_list.pop()
-        if is_pipe(position):
+        pipeline_x3.extend(rows_x3)
+
+    to_visit = [Position(0, 0)]
+    visited = set[Position]()
+
+    while to_visit:
+        el = to_visit.pop()
+        if el in visited:
+            continue
+        try:
+            val = pipeline_x3[el.top_shift][el.left_shift]
+        except IndexError:
             continue
 
-        if is_outside_bounding_box(position):
+        if val == 'X':
             continue
 
-        positions_to_check_list.append(*position.all_neighbours())
+        pipeline_x3[el.top_shift][el.left_shift] = 'X'
 
-        positions_outside.add(position)
+        for el in el.all_neighbours():
+            to_visit.append(el)
 
-    # TODO(pszyma): calc all 3x3 dots only
-    ...
+    total_3x3_dots = 0
+    # Window every 3x3.
+    for top_shift in range(0, len(pipeline_x3), 3):
+        for left_shift in range(0, len(pipeline_x3[0]), 3):
+            # Check if every item in window is dot.
+            dots_count = 0
+            for top_idx in range(top_shift, top_shift + 3):
+                for left_idx in range(left_shift, left_shift + 3):
+                    if pipeline_x3[top_idx][left_idx] == '.':
+                        dots_count += 1
+
+            if dots_count == 9:
+                total_3x3_dots += 1
+
+    print(total_3x3_dots)
 
 
 if __name__ == "__main__":
