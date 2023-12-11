@@ -3,8 +3,10 @@ from dataclasses import dataclass
 import pathlib
 from typing import Iterable, TypeVar
 
-# 742306702870 is too high
-_EMPTY_SHIFT = 10
+T = TypeVar("T")
+
+
+_EMPTY_SHIFT = 1_000_000
 
 
 @dataclass(frozen=True)
@@ -15,15 +17,18 @@ class Coord:
     def __hash__(self):
         return hash((self.col_idx, self.row_idx))
 
-T = TypeVar('T')
 
-def pairs(lst: Iterable[T]) -> Iterable[tuple[T, T]]:
+def distinct_pairs(lst: Iterable[T]) -> Iterable[tuple[T, T]]:
     for e1 in lst:
         for e2 in lst:
+            if e1 == e2:
+                continue
+
             yield (e1, e2)
 
+
 def main():
-    data = pathlib.Path("day11_input_test.txt").read_text()
+    data = pathlib.Path("day11_input.txt").read_text()
 
     rows = data.split("\n")
 
@@ -56,18 +61,15 @@ def main():
 
         galaxy_coords_shifted.add(
             Coord(
-                row_idx=coord.row_idx + (len(empty_rows_above) * _EMPTY_SHIFT),
-                col_idx=coord.col_idx + (len(empty_cols_on_left) * _EMPTY_SHIFT),
+                row_idx=coord.row_idx + (len(empty_rows_above) * (_EMPTY_SHIFT - 1)),
+                col_idx=coord.col_idx + (len(empty_cols_on_left) * (_EMPTY_SHIFT - 1)),
             )
         )
 
     distances_total: int = 0
     calculated_pairs: set[frozenset[Coord]] = set()
 
-    for c1, c2 in pairs(galaxy_coords_shifted):
-        if c1 == c2:
-            continue
-
+    for c1, c2 in distinct_pairs(galaxy_coords_shifted):
         if frozenset((c1, c2)) in calculated_pairs:
             continue
 
