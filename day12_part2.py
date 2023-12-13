@@ -45,7 +45,8 @@ class Arrangement:
             if self.current_item == "#":
                 if (
                     len(self.groups_to_match) == 1
-                    and self.groups_to_match[0] == self.current_group_len + 1 # +1 for current item
+                    and self.groups_to_match[0]
+                    == self.current_group_len + 1  # +1 for current item
                 ):
                     return [
                         Arrangement(
@@ -158,40 +159,55 @@ class Arrangement:
         raise ValueError("unexpected state")
 
 
+@dataclass
+class Arrangement:
+    items: list[str]
+    groups_to_consume: list[int]
+
+    current_id: int
+
+    current_group_items: list[str] = []
+
+    def item_to_process(self) -> str:
+        return self.items[self.current_id]
+
+    def with_value(self, new_value: str) -> 'Arrangement':
+        items_copy = list(self.items)
+        items_copy[self.current_id] = new_value
+        return Arrangement(
+                items=items_copy,
+                groups_to_consume=self.groups_to_consume,
+                current_id=self.current_id,
+                current_group_items=self.current_group_items,
+        )
+
 def _arrangements_for(raw_line: str) -> int:
     groups_raw, arrangements_raw = raw_line.split(" ")
 
     groups = [int(a) for a in arrangements_raw.split(",")]
 
     initial_opt = list(groups_raw)
-    all_items = len(initial_opt)
     arrangements_to_process = [
-        Arrangement(
-            items_to_process=initial_opt[1:],
-            items_processed=[],
-            current_item=initial_opt[0],
-            groups_to_match=groups,
-            current_group_len=1 if initial_opt[0] == "#" else 0,
-        )
+        Arrangement(items=initial_opt, groups_to_consume=groups, current_id=0)
     ]
-    arrangements_final = []
 
     while arrangements_to_process:
-        arrangement = arrangements_to_process.pop()
+        argt = arrangements_to_process.pop()
 
-        if arrangement.all_consumed():
-            if arrangement.all_groups_matched():
-                arrangements_final.append(arrangement)
+        item = argt.item_to_process()
 
+        if item == '?':
+            arrangements_to_process.append(argt.with_value('#'))
+            arrangements_to_process.append(argt.with_value('.'))
             continue
 
-        # print("arrangement\t\t", str(arrangement))
-        next_arrangements = arrangement.process()
-        # print("next_arrangements\t", [str(s) for s in next_arrangements])
+        if item == '.':
+            if argt.current_id == 0: # is beginning
 
-        arrangements_to_process.extend(next_arrangements)
+            # Beginning
+            # End
+            # In middle
 
-    # print("arrangements_final", [str(a) for a in arrangements_final])
 
     return len(arrangements_final)
 

@@ -2,49 +2,87 @@
 import pathlib
 from dataclasses import dataclass
 
+
 @dataclass
 class Arrangement:
     value: list[str]
-    idx: int # currently processed index
-    groups: list[int] #
+    idx: int  # currently processed index
+    groups: list[int]  #
 
     def previous_value(self) -> str:
         return self.value[self.idx - 1]
 
 
+def pattern_groups_size(pattern: list[str]) -> list[int]:
+    groups_size = []
+    group_size = 0
+    for item in pattern:
+        if item == ".":
+            if group_size > 0:
+                groups_size.append(group_size)
+                group_size = 0
+        elif item == "?":
+            break
+        else:
+            assert item == "#"
+            group_size += 1
+
+    if group_size > 0:
+        groups_size.append(group_size)
+        group_size = []
+
+    return groups_size
+
+
+def can_be_subgroup(group_size: list[int], potential_supgroup: list[int]) -> bool:
+    if len(potential_supgroup) > len(group_size):
+        return False
+
+    for idx, _ in enumerate(potential_supgroup[:-1]):
+        if potential_supgroup[idx] != group_size[idx]: # todo: last can be smaller
+            return False
+
+    return True
+
+
 def _arrangements_for(raw_line: str) -> int:
-    groups_raw, arrangements_raw = raw_line.split(" ")
+    patterns_raw, groups_raw = raw_line.split(" ")
 
-    arrangements = [int(a) for a in arrangements_raw.split(",")]
+    expected_group_size = [int(a) for a in groups_raw.split(",")]
 
-    initial_opt = list(groups_raw)
-    final_options: list[list[str]] = []
-    options: list[list[str]] = [initial_opt]
+    initial_pattern = list(patterns_raw)
+    final_patterns: list[list[str]] = []
+    patterns: list[list[str]] = [initial_pattern]
 
+    while patterns:
+        pattern = patterns.pop()
 
-
-    while options:
-        opt = options.pop()
-        if '?' not in opt:
-            final_options.append(opt)
+        if not can_be_subgroup(
+            group_size=expected_group_size,
+            potential_supgroup=pattern_groups_size(pattern),
+        ):
             continue
 
-        for idx, el in enumerate(opt):
-            if el == '?':
-                opt[idx] = '.'
-                options.append(list(opt))
+        if "?" not in pattern:
+            final_patterns.append(pattern)
+            continue
 
-                opt[idx] = '#'
-                options.append(list(opt))
+        for idx, el in enumerate(pattern):
+            if el == "?":
+                pattern[idx] = "."
+                patterns.append(list(pattern))
+
+                pattern[idx] = "#"
+                patterns.append(list(pattern))
 
                 break
 
     valid_opt_count = 0
 
-    for final_opt in final_options:
+    for final_opt in final_patterns:
         final_opt = [e for e in "".join(final_opt).split(".") if e]
         final_opt_arg = [len(e) for e in final_opt]
-        if final_opt_arg == arrangements:
+        if final_opt_arg == expected_group_size:
             valid_opt_count += 1
 
     return valid_opt_count
