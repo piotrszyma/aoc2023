@@ -5,224 +5,99 @@ from dataclasses import dataclass
 
 @dataclass
 class Arrangement:
-    items_to_process: list[str]
-    items_processed: list[str]
-    current_item: str | None  # non indicates that arrangement is final and nothing else needed
-    groups_to_match: list[int]
-    current_group_len: int
+    value: list[str]
+    idx: int  # currently processed index
+    groups: list[int]  #
 
-    def __str__(self):
-        all_items = (
-            "".join(self.items_processed)
-            + ("|" + self.current_item + "|" if self.current_item else "")
-            + "".join(self.items_to_process)
-        )
-        return f"{all_items}, ci={self.current_item}, gtm={self.groups_to_match} gl={self.current_group_len}"
-
-    def all_consumed(self) -> bool:
-        return self.current_item is None
-
-    def all_groups_matched(self) -> bool:
-        return len(self.groups_to_match) == 0
-
-    def has_accumulated_group(self) -> bool:
-        return self.current_group_len > 0
-
-    def accumulated_group_matches_expected(self) -> bool:
-        return self.current_group_len == self.groups_to_match[0]
-
-    def next_item(self) -> str | None:
-        for item in self.items_to_process:
-            return item
-        return None
-
-    def next_items_processed(self) -> list[str]:
-        assert self.current_item is not None
-        return [*self.items_processed, self.current_item]
-
-    def process(self) -> list["Arrangement"]:
-        if self.current_item != "?" and len(self.items_to_process) == 0:
-            if self.current_item == "#":
-                if (
-                    len(self.groups_to_match) == 1
-                    and self.groups_to_match[0]
-                    == self.current_group_len + 1  # +1 for current item
-                ):
-                    return [
-                        Arrangement(
-                            items_to_process=[],
-                            items_processed=self.next_items_processed(),
-                            current_item=self.next_item(),
-                            groups_to_match=[],
-                            current_group_len=0,
-                        )
-                    ]
-                else:
-                    return []
-            elif self.current_item == ".":
-                if (len(self.groups_to_match) == 0 and self.current_group_len == 0) or (
-                    len(self.groups_to_match) == 1
-                    and self.groups_to_match[0] == self.current_group_len
-                ):
-                    return [
-                        Arrangement(
-                            items_to_process=[],
-                            items_processed=self.next_items_processed(),
-                            current_item=self.next_item(),
-                            groups_to_match=[],
-                            current_group_len=0,
-                        )
-                    ]
-                else:
-                    return []
-            else:
-                raise ValueError(f"unexpected current item = {self.current_item}")
-
-        if self.current_item == ".":
-            if self.has_accumulated_group():
-                if len(self.groups_to_match) == 0:
-                    return []
-                if self.current_group_len == self.groups_to_match[0]:
-                    # consume current item and matching group
-                    return [
-                        Arrangement(
-                            items_to_process=self.items_to_process[1:],
-                            items_processed=self.next_items_processed(),
-                            current_item=self.next_item(),
-                            groups_to_match=self.groups_to_match[1:],
-                            current_group_len=0,
-                        )
-                    ]
-                else:
-                    # Accumulated group must end but does not match expected group.
-                    return []
-            else:  # no accumulated groups
-                assert self.current_group_len == 0
-                return [
-                    Arrangement(
-                        items_to_process=self.items_to_process[1:],
-                        items_processed=self.next_items_processed(),
-                        current_item=self.next_item(),
-                        groups_to_match=self.groups_to_match,  # does not consume any groups to match
-                        current_group_len=self.current_group_len,  # should be 0
-                    )
-                ]
-        elif self.current_item == "#":
-            if self.has_accumulated_group():
-                self.current_group_len += 1
-
-                if len(self.groups_to_match) == 0:
-                    return []
-
-                expected_group_len = self.groups_to_match[0]
-                if expected_group_len < self.current_group_len:
-                    return []
-
-                return [
-                    Arrangement(
-                        items_to_process=self.items_to_process[1:],
-                        items_processed=self.next_items_processed(),
-                        current_item=self.next_item(),
-                        groups_to_match=self.groups_to_match,
-                        current_group_len=self.current_group_len,
-                    )
-                ]
-            else:  # no accumulated groups
-                assert self.current_group_len == 0
-                return [
-                    Arrangement(
-                        items_to_process=self.items_to_process[1:],
-                        items_processed=self.next_items_processed(),
-                        current_item=self.next_item(),
-                        groups_to_match=self.groups_to_match,
-                        current_group_len=1,  # a new group.
-                    )
-                ]
-        elif self.current_item == "?":
-            return [
-                Arrangement(
-                    items_to_process=self.items_to_process,
-                    items_processed=self.items_processed,
-                    current_item=".",
-                    groups_to_match=self.groups_to_match,
-                    current_group_len=self.current_group_len,
-                ),
-                Arrangement(
-                    items_to_process=self.items_to_process,
-                    items_processed=self.items_processed,
-                    current_item="#",
-                    groups_to_match=self.groups_to_match,
-                    current_group_len=self.current_group_len,
-                ),
-            ]
-
-        raise ValueError("unexpected state")
+    def previous_value(self) -> str:
+        return self.value[self.idx - 1]
 
 
-@dataclass
-class Arrangement:
-    items: list[str]
-    groups_to_consume: list[int]
+def pattern_groups_size(pattern: list[str]) -> list[int]:
+    groups_size = []
+    group_size = 0
+    for item in pattern:
+        if item == ".":
+            if group_size > 0:
+                groups_size.append(group_size)
+                group_size = 0
+        elif item == "?":
+            break
+        else:
+            if item != '#':
+                ...
+            assert item == "#"
+            group_size += 1
 
-    current_id: int
+    if group_size > 0:
+        groups_size.append(group_size)
+        group_size = []
 
-    current_group_items: list[str] = []
+    return groups_size
 
-    def item_to_process(self) -> str:
-        return self.items[self.current_id]
 
-    def with_value(self, new_value: str) -> 'Arrangement':
-        items_copy = list(self.items)
-        items_copy[self.current_id] = new_value
-        return Arrangement(
-                items=items_copy,
-                groups_to_consume=self.groups_to_consume,
-                current_id=self.current_id,
-                current_group_items=self.current_group_items,
-        )
+def can_be_subgroup(group_size: list[int], potential_supgroup: list[int]) -> bool:
+    if len(potential_supgroup) > len(group_size):
+        return False
+
+    for idx, _ in enumerate(potential_supgroup[:-1]):
+        if potential_supgroup[idx] != group_size[idx]: # todo: last can be smaller
+            return False
+
+    return True
+
 
 def _arrangements_for(raw_line: str) -> int:
-    groups_raw, arrangements_raw = raw_line.split(" ")
+    patterns_raw, groups_raw = raw_line.split(" ")
 
-    groups = [int(a) for a in arrangements_raw.split(",")]
+    patterns_raw = '?'.join(patterns_raw for _ in range(5))
+    groups_raw = ','.join(groups_raw for _ in range(5))
 
-    initial_opt = list(groups_raw)
-    arrangements_to_process = [
-        Arrangement(items=initial_opt, groups_to_consume=groups, current_id=0)
-    ]
+    expected_group_size = [int(a) for a in groups_raw.split(",")]
 
-    while arrangements_to_process:
-        argt = arrangements_to_process.pop()
+    initial_pattern = list(patterns_raw)
+    final_patterns: list[list[str]] = []
+    patterns: list[list[str]] = [initial_pattern]
 
-        item = argt.item_to_process()
+    while patterns:
+        pattern = patterns.pop()
 
-        if item == '?':
-            arrangements_to_process.append(argt.with_value('#'))
-            arrangements_to_process.append(argt.with_value('.'))
+        if not can_be_subgroup(
+            group_size=expected_group_size,
+            potential_supgroup=pattern_groups_size(pattern),
+        ):
             continue
 
-        if item == '.':
-            if argt.current_id == 0: # is beginning
+        if "?" not in pattern:
+            final_patterns.append(pattern)
+            continue
 
-            # Beginning
-            # End
-            # In middle
+        for idx, el in enumerate(pattern):
+            if el == "?":
+                pattern[idx] = "."
+                patterns.append(list(pattern))
 
+                pattern[idx] = "#"
+                patterns.append(list(pattern))
 
-    return len(arrangements_final)
+                break
+
+    valid_opt_count = 0
+
+    for final_opt in final_patterns:
+        final_opt = [e for e in "".join(final_opt).split(".") if e]
+        final_opt_arg = [len(e) for e in final_opt]
+        if final_opt_arg == expected_group_size:
+            valid_opt_count += 1
+
+    return valid_opt_count
 
 
 def main():
-    data = pathlib.Path("day12_input.txt").read_text()
+    data = pathlib.Path("day12_input_test.txt").read_text()
     lines = data.split("\n")
-
-    count_all = 0
-    for line in lines:
-        count = _arrangements_for(line)
-        print(count, "\t", line)
-        count_all += count
-
-    print(count_all)
+    arrangements_sum = sum(_arrangements_for(l) for l in lines)
+    print(arrangements_sum)
 
 
 if __name__ == "__main__":
