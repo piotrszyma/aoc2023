@@ -1,16 +1,64 @@
-from day12_part1 import can_be_subgroup, pattern_groups_size
+from day12_part1 import Record, arrangements_count, find_unknown_idx
 
 
-def test_groups_size():
-    assert pattern_groups_size(list(".#.###.#####")) == [1, 3, 5]
-    assert pattern_groups_size(list("#.###.#####")) == [1, 3, 5]
-    assert pattern_groups_size(list("#.###.#####.")) == [1, 3, 5]
-    assert pattern_groups_size(list("#.###.#####.?")) == [1, 3, 5]
-    assert pattern_groups_size(list("#.?###.#####.?")) == [1]
-    assert pattern_groups_size(list("#..#")) == [1, 1]
+def test_arrangements_counts():
+    line = "??? 1,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
 
 
-def test_can_be_supgroup():
-    assert can_be_subgroup(group_size=[1, 2, 3], potential_supgroup=[1, 2, 3])
-    assert can_be_subgroup(group_size=[1, 2, 3], potential_supgroup=[1, 2])
-    assert not can_be_subgroup(group_size=[2, 2, 3], potential_supgroup=[1, 2])
+def test_arrangements_counts2():
+    line = "#.# 1,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts3():
+    line = "#.? 1,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts4():
+    line = "?.# 1,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts5():
+    line = "?.? 1,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts6():
+    line = "#?? 1,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts7():
+    line = "#.#.### 1,1,3"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts8():
+    line = ".??..??...?##. 1,1,3"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+def test_find_unknown():
+    # assert 0 == find_unknown_idx("?")
+    assert 0 == find_unknown_idx("?#")
+    assert 1 == find_unknown_idx("#?")
+    assert 0 == find_unknown_idx("?##")
+    assert 2 == find_unknown_idx("##?")

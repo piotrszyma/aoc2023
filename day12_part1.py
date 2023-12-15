@@ -1,97 +1,141 @@
 # Day 12
+import functools
 import pathlib
 from dataclasses import dataclass
+import re
 
 
 @dataclass
-class Arrangement:
-    value: list[str]
-    idx: int  # currently processed index
-    groups: list[int]  #
+class Record:
+    value: str
+    groups: tuple[int, ...]
 
-    def previous_value(self) -> str:
-        return self.value[self.idx - 1]
+    @staticmethod
+    def from_line(l: str) -> "Record":
+        value, groups_raw = l.split(" ")
+        groups = tuple(map(int, groups_raw.split(",")))
+        return Record(value=value, groups=groups)
 
 
-def pattern_groups_size(pattern: list[str]) -> list[int]:
-    groups_size = []
-    group_size = 0
-    for item in pattern:
-        if item == ".":
-            if group_size > 0:
-                groups_size.append(group_size)
-                group_size = 0
-        elif item == "?":
-            break
+# def arrangements_count_internal(
+#         values: list[str],
+#         groups: tuple[int, ...]
+# ) -> int:
+
+
+def find_unknown_idx(value: str) -> int:
+    if "?" not in value:
+        assert "?" in value
+
+    idx = len(value) // 2 - 1
+    left_idx = idx
+    right_idx = idx + 1
+    while True:
+        if left_idx >= 0 and value[left_idx] == "?":
+            return left_idx
+
+        if right_idx < len(value) and value[right_idx] == "?":
+            return right_idx
+
+        left_idx -= 1
+        right_idx += 1
+
+
+Values = tuple[str, ...]
+GroupSizes = tuple[int, ...]
+ValueGroups = tuple[Values, ...]
+
+
+def trim_value_groups(
+    value_groups: ValueGroups, group_sizes: GroupSizes
+) -> tuple[ValueGroups, GroupSizes]:
+    for value_group, group_size in zip(value_groups[::], group_sizes[::]):
+        if len(value_group) == group_size:
+            value_groups = value_groups[1:]
+            group_sizes = group_sizes[1:]
         else:
-            assert item == "#"
-            group_size += 1
+            break
 
-    if group_size > 0:
-        groups_size.append(group_size)
-        group_size = []
+    for value_group, group_size in zip(value_groups[::-1], group_sizes[::-1]):
+        if len(value_group) == group_size:
+            value_groups = value_groups[:-1]
+            group_sizes = group_sizes[:-1]
+        else:
+            break
 
-    return groups_size
+    return (value_groups, group_sizes)
 
 
-def can_be_subgroup(group_size: list[int], potential_supgroup: list[int]) -> bool:
-    if len(potential_supgroup) > len(group_size):
+def are_valid(value_groups: ValueGroups, group_sizes: GroupSizes) -> bool:
+    if not value_groups and group_sizes:  # No more values but still value groups.
         return False
 
-    for idx, _ in enumerate(potential_supgroup[:-1]):
-        if potential_supgroup[idx] != group_size[idx]: # todo: last can be smaller
-            return False
+    for value_group, group_size in zip(value_groups[::], group_sizes[::]):
+        if len(value_group) != group_size:
+            if "?" not in value_group:
+                return False
+            else:
+                break
+
+    for value_group, group_size in zip(value_groups[::-1], group_sizes[::-1]):
+        if len(value_group) != group_size:
+            if "?" not in value_group:
+                return False
+            else:
+                break
 
     return True
 
 
-def _arrangements_for(raw_line: str) -> int:
-    patterns_raw, groups_raw = raw_line.split(" ")
+@functools.lru_cache()
+def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
+    value_groups: ValueGroups = tuple(tuple(g) for g in re.split(r"\.+", values) if g)
 
-    expected_group_size = [int(a) for a in groups_raw.split(",")]
+    value_groups, group_sizes = trim_value_groups(value_groups, group_sizes)
 
-    initial_pattern = list(patterns_raw)
-    final_patterns: list[list[str]] = []
-    patterns: list[list[str]] = [initial_pattern]
+    if not are_valid(value_groups, group_sizes):
+        return 0
 
-    while patterns:
-        pattern = patterns.pop()
+    if not value_groups and not group_sizes: # all trimmed (groups matching)
+        return 1
 
-        if not can_be_subgroup(
-            group_size=expected_group_size,
-            potential_supgroup=pattern_groups_size(pattern),
-        ):
-            continue
+    # ??? 1,1
 
-        if "?" not in pattern:
-            final_patterns.append(pattern)
-            continue
+    values = ".".join("".join(g) for g in value_groups)
 
-        for idx, el in enumerate(pattern):
-            if el == "?":
-                pattern[idx] = "."
-                patterns.append(list(pattern))
+    unknown_idx = find_unknown_idx(values)
 
-                pattern[idx] = "#"
-                patterns.append(list(pattern))
+    values_lst_1 = list(values)
+    values_lst_1[unknown_idx] = "#"
+    values_lst_1 = "".join(values_lst_1)
 
-                break
+    arrangements_1 = arrangements_count(values_lst_1, group_sizes)
 
-    valid_patterns_count = 0
+    values_lst_2 = list(values)
+    values_lst_2[unknown_idx] = "."
+    values_lst_2 = "".join(values_lst_2)
 
-    for pattern in final_patterns:
-        groups_size = pattern_groups_size(pattern)
-        if groups_size == expected_group_size:
-            valid_patterns_count += 1
+    arrangements_2 = arrangements_count(values_lst_2, group_sizes)
 
-    return valid_patterns_count
+    total_count = arrangements_1 + arrangements_2
+
+    print(values, group_sizes, total_count)
+
+    return total_count
 
 
 def main():
-    data = pathlib.Path("day12_input.txt").read_text()
+    data = pathlib.Path("day12_input_test.txt").read_text()
     lines = data.split("\n")
-    arrangements_sum = sum(_arrangements_for(l) for l in lines)
-    print(arrangements_sum)
+
+    total_count = 0
+    for line in lines:
+        record = Record.from_line(line)
+        line_count = arrangements_count(record.value, record.groups)
+        print(line, line_count)
+        total_count += line_count
+
+    print(total_count)
 
 
 if __name__ == "__main__":
