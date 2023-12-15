@@ -27,7 +27,7 @@ def find_unknown_idx(value: str) -> int:
     if "?" not in value:
         assert "?" in value
 
-    idx = len(value) // 2 - 1
+    idx = len(value) // 2
     left_idx = idx
     right_idx = idx + 1
     while True:
@@ -67,6 +67,11 @@ def trim_value_groups(
 
 
 def are_valid(value_groups: ValueGroups, group_sizes: GroupSizes) -> bool:
+    if value_groups and not group_sizes:
+        for value_group in value_groups:
+            if '#' in value_group:
+                return False
+
     if not value_groups and group_sizes:  # No more values but still value groups.
         return False
 
@@ -85,6 +90,16 @@ def are_valid(value_groups: ValueGroups, group_sizes: GroupSizes) -> bool:
                 break
 
     return True
+
+def opts_with_question_at(idx: int, initial_value: str) -> tuple[str, str]:
+    tmpl = list(initial_value)
+    tmpl[idx] = '#'
+    opts = []
+    opts.append("".join(tmpl))
+
+    tmpl[idx] = '.'
+    opts.append("".join(tmpl))
+    return (opts[0], opts[1])
 
 
 @functools.lru_cache()
@@ -105,24 +120,19 @@ def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
 
     unknown_idx = find_unknown_idx(values)
 
-    values_lst_1 = list(values)
-    values_lst_1[unknown_idx] = "#"
-    values_lst_1 = "".join(values_lst_1)
+    new_with_hash, new_with_dot = opts_with_question_at(unknown_idx, values)
 
-    arrangements_1 = arrangements_count(values_lst_1, group_sizes)
+    count_with_hash = arrangements_count(new_with_hash, group_sizes)
+    count_with_dot = arrangements_count(new_with_dot, group_sizes)
 
-    values_lst_2 = list(values)
-    values_lst_2[unknown_idx] = "."
-    values_lst_2 = "".join(values_lst_2)
+    count_total = count_with_dot + count_with_hash
 
-    arrangements_2 = arrangements_count(values_lst_2, group_sizes)
+    print(values, group_sizes, count_total)
 
-    total_count = arrangements_1 + arrangements_2
+    return count_total
 
-    print(values, group_sizes, total_count)
-
-    return total_count
-
+# ?##
+#
 
 def main():
     data = pathlib.Path("day12_input_test.txt").read_text()
