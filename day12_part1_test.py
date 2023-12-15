@@ -54,6 +54,12 @@ def test_arrangements_counts8():
     line = ".??..??...?##. 1,1,3"
     record = Record.from_line(line)
     line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 4
+
+def test_arrangements_counts9():
+    line = "?#?#?#?#?#?#?#? 1,3,1,6"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
     assert line_count == 1
 
 def test_find_unknown():
