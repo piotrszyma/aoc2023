@@ -77,15 +77,14 @@ def _arrangements_for(raw_line: str) -> int:
 
                 break
 
-    valid_opt_count = 0
+    valid_patterns_count = 0
 
-    for final_opt in final_patterns:
-        final_opt = [e for e in "".join(final_opt).split(".") if e]
-        final_opt_arg = [len(e) for e in final_opt]
-        if final_opt_arg == expected_group_size:
-            valid_opt_count += 1
+    for pattern in final_patterns:
+        groups_size = pattern_groups_size(pattern)
+        if groups_size == expected_group_size:
+            valid_patterns_count += 1
 
-    return valid_opt_count
+    return valid_patterns_count
 
 
 def main():

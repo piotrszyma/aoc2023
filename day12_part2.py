@@ -1,4 +1,5 @@
 # Day 12
+import functools
 import pathlib
 from dataclasses import dataclass
 
@@ -13,7 +14,7 @@ class Arrangement:
         return self.value[self.idx - 1]
 
 
-def pattern_groups_size(pattern: list[str]) -> list[int]:
+def pattern_groups_size(pattern: tuple[str, ...]) -> tuple[int, ...]:
     groups_size = []
     group_size = 0
     for item in pattern:
@@ -24,7 +25,7 @@ def pattern_groups_size(pattern: list[str]) -> list[int]:
         elif item == "?":
             break
         else:
-            if item != '#':
+            if item != "#":
                 ...
             assert item == "#"
             group_size += 1
@@ -33,64 +34,97 @@ def pattern_groups_size(pattern: list[str]) -> list[int]:
         groups_size.append(group_size)
         group_size = []
 
-    return groups_size
+    return tuple(groups_size)
 
 
-def can_be_subgroup(group_size: list[int], potential_supgroup: list[int]) -> bool:
+def can_be_subgroup(group_size: tuple[int, ...], potential_supgroup: tuple[int, ...]) -> bool:
     if len(potential_supgroup) > len(group_size):
         return False
 
     for idx, _ in enumerate(potential_supgroup[:-1]):
-        if potential_supgroup[idx] != group_size[idx]: # todo: last can be smaller
+        if potential_supgroup[idx] != group_size[idx]:  # todo: last can be smaller
             return False
 
     return True
 
 
+@dataclass
+class Pattern:
+    value: tuple[str, ...]
+    unknown_count: int
+    unknown_first_idx: int = 0
+
+
+_MULTIPLIER = 5
+
+
 def _arrangements_for(raw_line: str) -> int:
+    print('calculating for ', raw_line)
+
     patterns_raw, groups_raw = raw_line.split(" ")
 
-    patterns_raw = '?'.join(patterns_raw for _ in range(5))
-    groups_raw = ','.join(groups_raw for _ in range(5))
+    # TODO: uncomment for part 2
 
-    expected_group_size = [int(a) for a in groups_raw.split(",")]
+    patterns_raw = "?".join(patterns_raw for _ in range(_MULTIPLIER))
+    groups_raw = ",".join(groups_raw for _ in range(_MULTIPLIER))
 
-    initial_pattern = list(patterns_raw)
-    final_patterns: list[list[str]] = []
-    patterns: list[list[str]] = [initial_pattern]
+    expected_group_size = tuple(int(a) for a in groups_raw.split(","))
+
+    initial_pattern = Pattern(
+        value=tuple(patterns_raw), unknown_count=patterns_raw.count("?")
+    )
+    final_patterns: list[Pattern] = []
+    patterns: list[Pattern] = [initial_pattern]
 
     while patterns:
         pattern = patterns.pop()
 
+        groups_size = pattern_groups_size(pattern.value)
         if not can_be_subgroup(
             group_size=expected_group_size,
-            potential_supgroup=pattern_groups_size(pattern),
+            potential_supgroup=groups_size,
         ):
             continue
 
-        if "?" not in pattern:
+        assert pattern.unknown_count >= 0
+        if pattern.unknown_count == 0:
             final_patterns.append(pattern)
             continue
 
-        for idx, el in enumerate(pattern):
-            if el == "?":
-                pattern[idx] = "."
-                patterns.append(list(pattern))
+        for idx, el in enumerate(pattern.value):
+            if idx < pattern.unknown_first_idx:
+                continue
 
-                pattern[idx] = "#"
-                patterns.append(list(pattern))
+            if el == "?":
+                value = list(pattern.value)
+                value[idx] = "."
+                patterns.append(
+                    Pattern(
+                        value=tuple(value),
+                        unknown_count=pattern.unknown_count - 1,
+                        unknown_first_idx=idx + 1,
+                    )
+                )
+
+                value[idx] = "#"
+                patterns.append(
+                    Pattern(
+                        value=tuple(value),
+                        unknown_count=pattern.unknown_count - 1,
+                        unknown_first_idx=idx + 1,
+                    )
+                )
 
                 break
 
-    valid_opt_count = 0
+    valid_patterns_count = 0
 
-    for final_opt in final_patterns:
-        final_opt = [e for e in "".join(final_opt).split(".") if e]
-        final_opt_arg = [len(e) for e in final_opt]
-        if final_opt_arg == expected_group_size:
-            valid_opt_count += 1
+    for pattern in final_patterns:
+        groups_size = pattern_groups_size(pattern.value)
+        if groups_size == expected_group_size:
+            valid_patterns_count += 1
 
-    return valid_opt_count
+    return valid_patterns_count
 
 
 def main():
