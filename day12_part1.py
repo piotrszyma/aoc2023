@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
+_MULTIPLER = 1
 
 @dataclass
 class Record:
@@ -13,8 +14,9 @@ class Record:
 
     @staticmethod
     def from_line(l: str) -> "Record":
-        value, groups_raw = l.split(" ")
-        groups = tuple(map(int, groups_raw.split(",")))
+        value_raw, groups_raw = l.split(" ")
+        groups = tuple(map(int, groups_raw.split(","))) * _MULTIPLER
+        value = "?".join(value_raw for _ in range(_MULTIPLER))
         return Record(value=value, groups=groups)
 
 
@@ -96,7 +98,13 @@ def are_valid(value_groups: ValueGroups, group_sizes: GroupSizes) -> bool:
 
     return True
 
+def replace_at_idx(val: str, idx: int, new_value: str) -> str:
+    table = list(val)
+    table[idx] = new_value
+    return  "".join(table)
 
+
+@functools.lru_cache
 def opts_with_question_at(idx: int, initial_value: str) -> tuple[str, str]:
     tmpl = list(initial_value)
     tmpl[idx] = "#"
@@ -145,9 +153,8 @@ def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
         right_opts = arrangements_count(right_values, right_group_sizes)
         count_with_split += left_opts * right_opts
 
-    new_with_hash, _ = opts_with_question_at(unknown_idx, values)
+    new_with_hash = replace_at_idx(values, unknown_idx, '#')
     count_with_hash = arrangements_count(new_with_hash, group_sizes)
-    # count_with_dot = arrangements_count(new_with_dot, group_sizes)
 
     count_total = count_with_split + count_with_hash
 
@@ -161,14 +168,14 @@ def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
 
 
 def main():
-    data = pathlib.Path("day12_input.txt").read_text()
+    data = pathlib.Path("day12_input_test.txt").read_text()
     lines = data.split("\n")
 
     total_count = 0
     for line in lines:
         record = Record.from_line(line)
         line_count = arrangements_count(record.value, record.groups)
-        # print(line, line_count)
+        print(line, line_count)
         total_count += line_count
 
     print(total_count)
