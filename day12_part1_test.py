@@ -1,4 +1,9 @@
-from day12_part1 import Record, arrangements_count, find_unknown_idx
+from day12_part1 import (
+    Record,
+    arrangements_count,
+    find_unknown_idx,
+    get_potential_group_splits,
+)
 
 
 def test_arrangements_counts():
@@ -143,6 +148,7 @@ def test_arrangements_counts20():
     line_count = arrangements_count(record.value, record.groups)
     assert line_count == 2
 
+
 # ?###.##.???
 
 
@@ -155,6 +161,7 @@ def test_arrangements_counts21():
 
 # ?##.#.? (2, 1)
 
+
 def test_arrangements_counts22():
     # TODO: this should pass - make sure it does first
     line = "?##.#.? 2,1"
@@ -163,9 +170,31 @@ def test_arrangements_counts22():
     assert line_count == 1
 
 
+def test_arrangements_counts23():
+    # TODO: this should pass - make sure it does first
+    line = ".??..??...?##..??..??...?##. 1,1,3,1,1,3"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 16
+
+
 def test_find_unknown():
     # assert 0 == find_unknown_idx("?")
     assert 0 == find_unknown_idx("?#")
     assert 1 == find_unknown_idx("#?")
     assert 0 == find_unknown_idx("?##")
     assert 2 == find_unknown_idx("##?")
+
+
+def test_group_splits():
+    assert [
+        (
+            tuple(),
+            (1, 2,),
+        ),
+        (
+            (1,),
+            (2,),
+        ),
+        ((1, 2,), tuple()),
+    ] == list(get_potential_group_splits((1, 2)))
