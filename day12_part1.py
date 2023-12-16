@@ -124,6 +124,21 @@ def get_potential_group_splits(
         right_groups = value_groups[split_idx:]
         yield (left_groups, right_groups)
 
+def groups_from_values(values: tuple[str, ...]) -> ValueGroups:
+    groups: list[Values] = []
+    group: list[str] = []
+
+    for v in values:
+        if v == '.':
+            if len(group) > 0:
+                groups.append(tuple(group))
+                group = []
+
+            continue
+        else:
+            group.append(v)
+
+    return tuple(groups)
 
 @functools.lru_cache()
 def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
@@ -168,7 +183,7 @@ def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
 
 
 def main():
-    data = pathlib.Path("day12_input_test.txt").read_text()
+    data = pathlib.Path("day12_input.txt").read_text()
     lines = data.split("\n")
 
     total_count = 0
