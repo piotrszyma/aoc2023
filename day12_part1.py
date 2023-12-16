@@ -50,14 +50,14 @@ def trim_value_groups(
     value_groups: ValueGroups, group_sizes: GroupSizes
 ) -> tuple[ValueGroups, GroupSizes]:
     for value_group, group_size in zip(value_groups[::], group_sizes[::]):
-        if len(value_group) == group_size:
+        if len(value_group) == group_size and '?' not in value_group:
             value_groups = value_groups[1:]
             group_sizes = group_sizes[1:]
         else:
             break
 
     for value_group, group_size in zip(value_groups[::-1], group_sizes[::-1]):
-        if len(value_group) == group_size:
+        if len(value_group) == group_size and '?' not in value_group:
             value_groups = value_groups[:-1]
             group_sizes = group_sizes[:-1]
         else:

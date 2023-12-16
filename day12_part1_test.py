@@ -99,11 +99,69 @@ def test_arrangements_counts14():
     assert line_count == 3
 
 
+# '#..' i '..#' ??
+
+
 def test_arrangements_counts15():
     line = "?.? 1"
     record = Record.from_line(line)
     line_count = arrangements_count(record.value, record.groups)
     assert line_count == 2
+
+
+def test_arrangements_counts16():
+    line = "??# 1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts17():
+    line = "?.# 1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
+
+def test_arrangements_counts18():
+    line = "?###???????? 3,2,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 10
+
+
+def test_arrangements_counts19():
+    line = "?###??#????? 3,2,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 7
+
+
+def test_arrangements_counts20():
+    line = "?###??#??#?? 3,2,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 2
+
+# ?###.##.???
+
+
+def test_arrangements_counts21():
+    line = "?##.??? 2,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 3
+
+
+# ?##.#.? (2, 1)
+
+def test_arrangements_counts22():
+    # TODO: this should pass - make sure it does first
+    line = "?##.#.? 2,1"
+    record = Record.from_line(line)
+    line_count = arrangements_count(record.value, record.groups)
+    assert line_count == 1
+
 
 def test_find_unknown():
     # assert 0 == find_unknown_idx("?")
