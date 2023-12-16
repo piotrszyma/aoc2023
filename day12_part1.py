@@ -3,9 +3,19 @@ import functools
 import pathlib
 from dataclasses import dataclass
 import re
-from typing import Iterable
+from typing import Callable, Iterable, Iterator
+from time import perf_counter
+from contextlib import contextmanager
 
-_MULTIPLER = 1
+# 1376023944678 is too low
+
+
+@contextmanager
+def catchtime():
+    start = perf_counter()
+    yield lambda: perf_counter() - start
+    print(f"Time: {perf_counter() - start:.3f} seconds")
+
 
 @dataclass
 class Record:
@@ -13,17 +23,11 @@ class Record:
     groups: tuple[int, ...]
 
     @staticmethod
-    def from_line(l: str) -> "Record":
+    def from_line(l: str, multiplier=1) -> "Record":
         value_raw, groups_raw = l.split(" ")
-        groups = tuple(map(int, groups_raw.split(","))) * _MULTIPLER
-        value = "?".join(value_raw for _ in range(_MULTIPLER))
+        groups = tuple(map(int, groups_raw.split(","))) * multiplier
+        value = "?".join(value_raw for _ in range(multiplier))
         return Record(value=value, groups=groups)
-
-
-# def arrangements_count_internal(
-#         values: list[str],
-#         groups: tuple[int, ...]
-# ) -> int:
 
 
 def find_unknown_idx(value: str) -> int:
@@ -59,6 +63,14 @@ def trim_value_groups(
             group_sizes = group_sizes[1:]
         else:
             break
+
+    for value_group, group_size in zip(value_groups[::], group_sizes[::]):
+        if len(value_group) == group_size and "?" not in value_group:
+            value_groups = value_groups[1:]
+            group_sizes = group_sizes[1:]
+        else:
+            break
+
 
     for value_group, group_size in zip(value_groups[::-1], group_sizes[::-1]):
         if len(value_group) == group_size and "?" not in value_group:
@@ -98,10 +110,11 @@ def are_valid(value_groups: ValueGroups, group_sizes: GroupSizes) -> bool:
 
     return True
 
+
 def replace_at_idx(val: str, idx: int, new_value: str) -> str:
     table = list(val)
     table[idx] = new_value
-    return  "".join(table)
+    return "".join(table)
 
 
 @functools.lru_cache
@@ -124,24 +137,22 @@ def get_potential_group_splits(
         right_groups = value_groups[split_idx:]
         yield (left_groups, right_groups)
 
-def groups_from_values(values: tuple[str, ...]) -> ValueGroups:
-    groups: list[Values] = []
-    group: list[str] = []
 
-    for v in values:
-        if v == '.':
-            if len(group) > 0:
-                groups.append(tuple(group))
-                group = []
+@functools.lru_cache()
+def _group_sizes_sum(group_sizes: tuple[int, ...]) -> int:
+    return sum(group_sizes)
 
-            continue
-        else:
-            group.append(v)
 
-    return tuple(groups)
+@functools.lru_cache()
+def _unknown_only(val: str) -> bool:
+    return all(v == "?" for v in val)
+
 
 @functools.lru_cache()
 def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
+    if len(values) < _group_sizes_sum(group_sizes):
+        return 0
+
     value_groups: ValueGroups = tuple(tuple(g) for g in re.split(r"\.+", values) if g)
 
     value_groups, group_sizes = trim_value_groups(value_groups, group_sizes)
@@ -152,23 +163,31 @@ def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
     if not value_groups and not group_sizes:  # all trimmed (groups matching)
         return 1
 
-    # TODO: try to split after every group_size
+    if _unknown_only(values):
+        if len(group_sizes) == 0:
+            return 1
 
-    # ??? 1,1
+        total_expected_values_count = (
+            _group_sizes_sum(group_sizes) + len(group_sizes) - 1
+        )
+        if len(values) < total_expected_values_count:
+            return 0
 
     values = ".".join("".join(g) for g in value_groups)
 
     unknown_idx = find_unknown_idx(values)
 
-    #
     count_with_split = 0
     left_values, right_values = values[:unknown_idx], values[unknown_idx + 1 :]
-    for (left_group_sizes, right_group_sizes) in get_potential_group_splits(group_sizes):
+    for left_group_sizes, right_group_sizes in get_potential_group_splits(group_sizes):
         left_opts = arrangements_count(left_values, left_group_sizes)
+        if left_opts == 0:
+            continue
+
         right_opts = arrangements_count(right_values, right_group_sizes)
         count_with_split += left_opts * right_opts
 
-    new_with_hash = replace_at_idx(values, unknown_idx, '#')
+    new_with_hash = replace_at_idx(values, unknown_idx, "#")
     count_with_hash = arrangements_count(new_with_hash, group_sizes)
 
     count_total = count_with_split + count_with_hash
@@ -178,19 +197,24 @@ def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
     return count_total
 
 
-# ?##
-#
-
-
 def main():
     data = pathlib.Path("day12_input.txt").read_text()
     lines = data.split("\n")
 
     total_count = 0
-    for line in lines:
-        record = Record.from_line(line)
-        line_count = arrangements_count(record.value, record.groups)
-        print(line, line_count)
+    multiplier = 5
+
+    for idx, line in enumerate(lines):
+        record = Record.from_line(line, multiplier=multiplier)
+
+        print()
+        print(f"{idx}.")
+        print(line)
+        with catchtime():
+            line_count = arrangements_count(record.value, record.groups)
+        print(line_count)
+        print()
+
         total_count += line_count
 
     print(total_count)
