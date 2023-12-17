@@ -2,7 +2,6 @@ from day12_part1 import (
     Record,
     arrangements_count,
     find_unknown_idx,
-    get_potential_group_splits,
 )
 
 
@@ -184,17 +183,3 @@ def test_find_unknown():
     assert 1 == find_unknown_idx("#?")
     assert 0 == find_unknown_idx("?##")
     assert 2 == find_unknown_idx("##?")
-
-
-def test_group_splits():
-    assert [
-        (
-            tuple(),
-            (1, 2,),
-        ),
-        (
-            (1,),
-            (2,),
-        ),
-        ((1, 2,), tuple()),
-    ] == list(get_potential_group_splits((1, 2)))

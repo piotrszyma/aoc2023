@@ -53,148 +53,61 @@ GroupSizes = tuple[int, ...]
 ValueGroups = tuple[Values, ...]
 
 
-@functools.lru_cache
-def trim_value_groups(
-    value_groups: ValueGroups, group_sizes: GroupSizes
-) -> tuple[ValueGroups, GroupSizes]:
-    for value_group, group_size in zip(value_groups[::], group_sizes[::]):
-        if len(value_group) == group_size and "?" not in value_group:
-            value_groups = value_groups[1:]
-            group_sizes = group_sizes[1:]
-        else:
-            break
-
-    for value_group, group_size in zip(value_groups[::], group_sizes[::]):
-        if len(value_group) == group_size and "?" not in value_group:
-            value_groups = value_groups[1:]
-            group_sizes = group_sizes[1:]
-        else:
-            break
-
-
-    for value_group, group_size in zip(value_groups[::-1], group_sizes[::-1]):
-        if len(value_group) == group_size and "?" not in value_group:
-            value_groups = value_groups[:-1]
-            group_sizes = group_sizes[:-1]
-        else:
-            break
-
-    return (value_groups, group_sizes)
-
-
-@functools.lru_cache
-def are_valid(value_groups: ValueGroups, group_sizes: GroupSizes) -> bool:
-    if value_groups and not group_sizes:
-        for value_group in value_groups:
-            if "#" in value_group:
-                return False
-
-    if not value_groups and group_sizes:  # No more values but still value groups.
-        return False
-
-    for value_group, group_size in zip(value_groups[::], group_sizes[::]):
-        if "?" in value_group:
-            break
-
-        if len(value_group) != group_size:
-            assert "?" not in value_group
-            return False
-
-    for value_group, group_size in zip(value_groups[::-1], group_sizes[::-1]):
-        if "?" in value_group:
-            break
-
-        if len(value_group) != group_size:
-            assert "?" not in value_group
-            return False
-
-    return True
-
-
 def replace_at_idx(val: str, idx: int, new_value: str) -> str:
     table = list(val)
     table[idx] = new_value
     return "".join(table)
 
 
-@functools.lru_cache
-def opts_with_question_at(idx: int, initial_value: str) -> tuple[str, str]:
-    tmpl = list(initial_value)
-    tmpl[idx] = "#"
-    opts = []
-    opts.append("".join(tmpl))
-
-    tmpl[idx] = "."
-    opts.append("".join(tmpl))
-    return (opts[0], opts[1])
-
-
-def get_potential_group_splits(
-    value_groups: tuple[int, ...],
-) -> Iterable[tuple[tuple[int, ...], tuple[int, ...]]]:
-    for split_idx in range(len(value_groups) + 1):
-        left_groups = value_groups[:split_idx]
-        right_groups = value_groups[split_idx:]
-        yield (left_groups, right_groups)
-
-
 @functools.lru_cache()
-def _group_sizes_sum(group_sizes: tuple[int, ...]) -> int:
-    return sum(group_sizes)
+def arrangements_count(
+    values: str, group_sizes: tuple[int, ...], previous_was_hash=False
+) -> int:
+    if values == "":
+        no_more_group_sizes = len(group_sizes) == 0
+        # TODO: there must be more elegant way to handle this case
+        one_group_size_of_size_zero = len(group_sizes) == 1 and group_sizes[0] == 0
 
-
-@functools.lru_cache()
-def _unknown_only(val: str) -> bool:
-    return all(v == "?" for v in val)
-
-
-@functools.lru_cache()
-def arrangements_count(values: str, group_sizes: tuple[int, ...]) -> int:
-    if len(values) < _group_sizes_sum(group_sizes):
-        return 0
-
-    value_groups: ValueGroups = tuple(tuple(g) for g in re.split(r"\.+", values) if g)
-
-    value_groups, group_sizes = trim_value_groups(value_groups, group_sizes)
-
-    if not are_valid(value_groups, group_sizes):
-        return 0
-
-    if not value_groups and not group_sizes:  # all trimmed (groups matching)
-        return 1
-
-    if _unknown_only(values):
-        if len(group_sizes) == 0:
+        if no_more_group_sizes or one_group_size_of_size_zero:
             return 1
-
-        total_expected_values_count = (
-            _group_sizes_sum(group_sizes) + len(group_sizes) - 1
-        )
-        if len(values) < total_expected_values_count:
+        else:
             return 0
 
-    values = ".".join("".join(g) for g in value_groups)
+    if values[0] == ".":
+        if previous_was_hash:  # end of group
+            if len(group_sizes) == 0:  # no more groups expected
+                return 0
+            elif group_sizes[0] == 0:  #
+                return arrangements_count(
+                    values[1:], group_sizes[1:], previous_was_hash=False
+                )
+            else:
+                return 0
+        else:
+            return arrangements_count(values[1:], group_sizes, previous_was_hash=False)
+    elif values[0] == "#":
+        if len(group_sizes) == 0:
+            return 0
+        elif group_sizes[0] > 0:
+            group_sizes = (group_sizes[0] - 1, *group_sizes[1:])
+            return arrangements_count(values[1:], group_sizes, previous_was_hash=True)
+        else:
+            assert group_sizes[0] == 0
+            return 0
+    elif values[0] == "?":
+        values = replace_at_idx(values, 0, ".")
+        count_with_dot = arrangements_count(
+            values, group_sizes, previous_was_hash=previous_was_hash
+        )
 
-    unknown_idx = find_unknown_idx(values)
+        values = replace_at_idx(values, 0, "#")
+        count_with_hash = arrangements_count(
+            values, group_sizes, previous_was_hash=previous_was_hash
+        )
 
-    count_with_split = 0
-    left_values, right_values = values[:unknown_idx], values[unknown_idx + 1 :]
-    for left_group_sizes, right_group_sizes in get_potential_group_splits(group_sizes):
-        left_opts = arrangements_count(left_values, left_group_sizes)
-        if left_opts == 0:
-            continue
-
-        right_opts = arrangements_count(right_values, right_group_sizes)
-        count_with_split += left_opts * right_opts
-
-    new_with_hash = replace_at_idx(values, unknown_idx, "#")
-    count_with_hash = arrangements_count(new_with_hash, group_sizes)
-
-    count_total = count_with_split + count_with_hash
-
-    # print(values, group_sizes, count_total)
-
-    return count_total
+        return count_with_dot + count_with_hash
+    else:
+        raise ValueError(f"Unexpected {values=}")
 
 
 def main():
