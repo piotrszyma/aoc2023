@@ -61,7 +61,9 @@ class Context:
         current_dir: Dir | None = None,  # None for start
         current_dir_repeats=0,
         visited: set[Pos] = set(),
-    ) -> int:
+    ) -> int | None:
+        if start == end:
+            return 0
         print(start, end)
         cached_min = self.start_end_cache.get((start, end))
         if cached_min is not None:
@@ -82,7 +84,7 @@ class Context:
                 current_dir
             )  # if did not move 3 times current dir, allow move
 
-        opts: list[int] = []
+        opts: list[int] = [2*64]
         for next_dir in next_dirs:
             new_start = self.next_point(start, next_dir)
             if new_start is None:
@@ -95,34 +97,30 @@ class Context:
                 current_dir_repeats + 1 if next_dir == current_dir else 1
             )
 
-            opts.append(
-                self.heat_loss_map[start]
-                + self.min_total_heat_loss(
-                    new_start,
-                    end,
-                    current_dir=next_dir,
-                    current_dir_repeats=new_curr_dir_repeats,
-                    visited={*visited, start}
-                )
+            path_suffix_min_total_heat_loss = self.min_total_heat_loss(
+                new_start,
+                end,
+                current_dir=next_dir,
+                current_dir_repeats=new_curr_dir_repeats,
+                visited={*visited, start},
             )
+
+            if path_suffix_min_total_heat_loss is None:
+                continue
+
+            opts.append(self.heat_loss_map[start] + path_suffix_min_total_heat_loss)
 
         result = min(opts)
         self.start_end_cache[(start, end)] = result
         return result
-        # if source_dir is None: # Start.
-        #     return min(
-        #         self.heat_loss_map[] + self.min_total_heat_loss()
-        #     )
 
 
-def main():
-    data = pathlib.Path("day17_input_test.txt").read_text()
-
+def least_hit_loss_for_input(data: str) -> int:
     lines = data.split("\n")
 
     heat_loss_map: dict[Pos, int] = {}
 
-    bottom_right_pos = Pos(top_shift=len(lines), left_shift=len(lines[0]))
+    bottom_right_pos = Pos(top_shift=len(lines) - 1, left_shift=len(lines[0]) - 1)
 
     for top_shift, line in enumerate(lines):
         for left_shift, heat_loss in enumerate(line):
@@ -133,7 +131,13 @@ def main():
         bottom_right_pos,
     )
 
-    print(least_hit_loss)
+    return least_hit_loss
+
+
+def main():
+    data = pathlib.Path("day17_input_test.txt").read_text()
+
+    print(least_hit_loss_for_input(data))
 
 
 if __name__ == "__main__":
