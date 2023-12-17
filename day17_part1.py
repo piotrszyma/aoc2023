@@ -12,6 +12,8 @@ from typing import Literal
 # START: top left
 # FINISH: bottom right
 
+UNREACHABLE = Literal['UNREACHABLE']
+
 
 @dataclass(frozen=True)
 class Pos:
@@ -34,7 +36,7 @@ Dir = Literal[">", "^", "<", "v"]
 class Context:
     def __init__(self, heat_loss_map: dict[Pos, int]):
         self.heat_loss_map = heat_loss_map
-        self.start_end_cache: dict[tuple[Pos, Pos], int] = {}
+        self.start_end_cache: dict[tuple[Pos, Pos], int | UNREACHABLE] = {}
         self.visited = set[Pos]()
 
     def next_point(self, p: Pos, dir: Dir) -> Pos | None:
@@ -61,7 +63,7 @@ class Context:
         current_dir: Dir | None = None,  # None for start
         current_dir_repeats=0,
         visited: set[Pos] = set(),
-    ) -> int | None:
+    ) -> int | UNREACHABLE:
         if start == end:
             return 0
         print(start, end)
@@ -84,7 +86,7 @@ class Context:
                 current_dir
             )  # if did not move 3 times current dir, allow move
 
-        opts: list[int] = [2*64]
+        min_res: int | UNREACHABLE = 'UNREACHABLE'
         for next_dir in next_dirs:
             new_start = self.next_point(start, next_dir)
             if new_start is None:
@@ -92,6 +94,9 @@ class Context:
 
             if new_start in visited:
                 continue
+
+            if new_start == start:
+                ...
 
             new_curr_dir_repeats = (
                 current_dir_repeats + 1 if next_dir == current_dir else 1
@@ -105,12 +110,15 @@ class Context:
                 visited={*visited, start},
             )
 
-            if path_suffix_min_total_heat_loss is None:
+            if path_suffix_min_total_heat_loss == 'UNREACHABLE':
                 continue
 
-            opts.append(self.heat_loss_map[start] + path_suffix_min_total_heat_loss)
+            res = self.heat_loss_map[start] + path_suffix_min_total_heat_loss
 
-        result = min(opts)
+            if min_res == 'UNREACHABLE' or res < min_res:
+                min_res = res
+
+        result = min_res
         self.start_end_cache[(start, end)] = result
         return result
 
