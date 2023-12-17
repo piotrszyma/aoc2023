@@ -139,6 +139,9 @@ def least_hit_loss_for_input(data: str) -> int:
         bottom_right_pos,
     )
 
+    if least_hit_loss == "UNREACHABLE":
+        raise ValueError("Bottom right is unreachable from top left")
+
     return least_hit_loss
 
 
