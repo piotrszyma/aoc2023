@@ -115,7 +115,7 @@ def main():
     lines = data.split("\n")
 
     total_count = 0
-    multiplier = 5
+    multiplier = 1
 
     for idx, line in enumerate(lines):
         record = Record.from_line(line, multiplier=multiplier)
