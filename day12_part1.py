@@ -7,11 +7,9 @@ from typing import Callable, Iterable, Iterator
 from time import perf_counter
 from contextlib import contextmanager
 
-# 1376023944678 is too low
-
 
 @contextmanager
-def catchtime():
+def measure_exec_time():
     start = perf_counter()
     yield lambda: perf_counter() - start
     print(f"Time: {perf_counter() - start:.3f} seconds")
@@ -30,41 +28,13 @@ class Record:
         return Record(value=value, groups=groups)
 
 
-def find_unknown_idx(value: str) -> int:
-    if "?" not in value:
-        assert "?" in value
-
-    idx = len(value) // 2
-    left_idx = idx
-    right_idx = idx + 1
-    while True:
-        if left_idx >= 0 and value[left_idx] == "?":
-            return left_idx
-
-        if right_idx < len(value) and value[right_idx] == "?":
-            return right_idx
-
-        left_idx -= 1
-        right_idx += 1
-
-
-Values = tuple[str, ...]
-GroupSizes = tuple[int, ...]
-ValueGroups = tuple[Values, ...]
-
-
-def replace_at_idx(val: str, idx: int, new_value: str) -> str:
-    table = list(val)
-    table[idx] = new_value
-    return "".join(table)
-
-
 @functools.lru_cache()
 def arrangements_count(
     values: str, group_sizes: tuple[int, ...], previous_was_hash=False
 ) -> int:
     if values == "":
         no_more_group_sizes = len(group_sizes) == 0
+
         # TODO: there must be more elegant way to handle this case
         one_group_size_of_size_zero = len(group_sizes) == 1 and group_sizes[0] == 0
 
@@ -95,12 +65,12 @@ def arrangements_count(
             assert group_sizes[0] == 0
             return 0
     elif values[0] == "?":
-        values = replace_at_idx(values, 0, ".")
+        values = '.' + values[1:]
         count_with_dot = arrangements_count(
             values, group_sizes, previous_was_hash=previous_was_hash
         )
 
-        values = replace_at_idx(values, 0, "#")
+        values = '#' + values[1:]
         count_with_hash = arrangements_count(
             values, group_sizes, previous_was_hash=previous_was_hash
         )
@@ -123,7 +93,7 @@ def main():
         print()
         print(f"{idx}.")
         print(line)
-        with catchtime():
+        with measure_exec_time():
             line_count = arrangements_count(record.value, record.groups)
         print(line_count)
         print()
