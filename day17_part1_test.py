@@ -19,13 +19,11 @@ def test_case_2():
     assert result == 4
 
 def test_case_3():
-    data = """
-111111111
+    data = """111111111
 999999991
 111111111
 199999999
-111111111
-"""
+111111111"""
 
     result = least_hit_loss_for_input(data)
 

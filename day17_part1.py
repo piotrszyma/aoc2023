@@ -71,7 +71,8 @@ class Context:
         pos_with_dir: list[PosWithDir] = [],
     ) -> tuple[int | UNREACHABLE, set[Pos], list[PosWithDir]]:
         if start == end:
-            return 0, visited, pos_with_dir
+            assert current_dir
+            return self.heat_loss_map[end], {start, *visited}, [PosWithDir(pos=end, dir=current_dir), *pos_with_dir]
 
         cached_min = self.start_end_cache.get((start, end))
         if cached_min is not None:
@@ -88,9 +89,8 @@ class Context:
             raise ValueError("Unexpected current dir")
 
         if current_dir is not None and current_dir_repeats < 3:
-            next_dirs.append(
-                current_dir
-            )  # if did not move 3 times current dir, allow move
+            # if did not move 3 times current dir, allow move in current dir
+            next_dirs.append(current_dir)
 
         min_res: int | UNREACHABLE = 'UNREACHABLE'
         min_visited: set[Pos] = set()
@@ -104,7 +104,7 @@ class Context:
                 continue
 
             if new_start == start:
-                ...
+                continue
 
             new_curr_dir_repeats = (
                 current_dir_repeats + 1 if next_dir == current_dir else 1
@@ -116,6 +116,7 @@ class Context:
                 current_dir=next_dir,
                 current_dir_repeats=new_curr_dir_repeats,
                 visited={*visited, start},
+                pos_with_dir=[*pos_with_dir, PosWithDir(pos=new_start, dir=next_dir)]
             )
 
             if path_suffix_min_total_heat_loss == 'UNREACHABLE':
@@ -128,7 +129,7 @@ class Context:
             if min_res == 'UNREACHABLE' or res < min_res:
                 min_res = res
                 min_visited = prev_visited
-                min_pos_with_dir = [PosWithDir(pos=start, dir=next_dir), *prev_min_pos_with_dir]
+                min_pos_with_dir = prev_min_pos_with_dir
 
         result = min_res
         self.start_end_cache[(start, end)] = (result, min_visited, min_pos_with_dir)
